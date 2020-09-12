@@ -1,0 +1,86 @@
+#search-icon {
+    width: 40px;
+    height: 40px;
+    border: 1px solid white;
+    border-radius: 10px 0 0 10px;
+    text-align: center;
+    line-height: 40px;
+}
+
+.icon-search {
+    color: white;
+    font-size: 16px;
+}
+
+#search {
+    width: 200px;
+    height: 40px;
+    border-radius: 0 10px 10px 0;
+    border: transparent;
+    background-color: white;
+    padding: 0 5px;
+    font-size: 16px;
+}
+
+#listview > li {
+    position: relative;
+    padding: 10px;
+    border-bottom: 1px solid #f0f0f0;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+#listview > li:hover {
+    background-color: ghostwhite;
+}
+
+.tit {
+    word-wrap: break-word;
+    cursor: pointer;
+}
+
+.tit:hover {
+    text-decoration: underline;
+}
+
+.des {
+    word-wrap: break-word;
+    color: gray;
+    font-size: smaller;
+    cursor: copy;
+}
+
+.opt {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    top: 0; right: 0;
+    opacity: 0;
+}
+
+#listview > li:hover .opt {
+    opacity: 1;
+}
+
+.opt i {
+    cursor: pointer;
+    margin: 10px 10px 0 0;
+    background-color: white;
+    opacity: 0.6;
+}
+
+.opt i:hover {
+    opacity: 1;
+}
+
+.icon-trash {
+    color: red;
+}
+
+#delete-btn {
+    color: red;
+}
+
+#logout-btn {
+    color: blue;
+}
