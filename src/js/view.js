@@ -37,6 +37,8 @@ function init() {
 }
 
 function displayData() {
+    if ($(viewBtn).hasClass('icon-eye'))
+        $(viewBtn).removeClass('icon-eye').addClass('icon-eye-off');
     pageTitle.textContent = '查看';
     $(editBtns).hide();
     $(viewBtns).show();
