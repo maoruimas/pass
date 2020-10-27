@@ -25,7 +25,7 @@
 #listview > li {
     position: relative;
     padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px dotted #f5f5f5;
     break-inside: avoid;
     page-break-inside: avoid;
 }
@@ -45,7 +45,7 @@
 
 .des {
     word-wrap: break-word;
-    color: gray;
+    color: lightgray;
     font-size: smaller;
     cursor: copy;
 }
