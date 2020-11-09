@@ -151,51 +151,64 @@ async function post(method, form) {
 }
 
 async function signin() {
-    let form = new FormData()
+    let form = new FormData();
     form.append('username', loginUsr.value);
     let result = await post('signin', form);
-    if (result === '') {
-        loginErr.textContent = '用户不存在';
-    } else if (result) {
+
+    let valid = (result => {
+        if (result.length != 8) return false;
+        for (let i = 0; i < 8; ++i) {
+            let c = result.charCodeAt(i);
+            if (c < 48 || c > 57) return false;
+        }
+        return true;
+    })(result);
+
+    if (valid) {
+        let response = await fetch(`users/${result}`);
+        let data = await response.text();
         try {
-            getDecryptedData(result);
+            getDecryptedData(data);
+            drawerTitle.textContent = loginUsr.value;
+            $(login).fadeOut(100);
+            displayData();
+            toggleTip('登录成功');
         } catch(e) {
             loginErr.textContent = '密码错误';
-            return;
         }
-        drawerTitle.textContent = loginUsr.value;
-        $(login).fadeOut(100);
-        displayData();
-        toggleTip('登录成功');
+    } else {
+        loginErr.textContent = result;
     }
 }
 
 async function signup() {
     data = [];
-    let form = new FormData()
+    let form = new FormData();
     form.append('username', loginUsr.value);
     form.append('data', getEncryptedData());
     let result = await post('signup', form);
-    if (result) {
-        loginErr.textContent = result;
-    } else if (result === '') {
+    
+    if (result === '') {
         drawerTitle.textContent = loginUsr.value;
         $(login).fadeOut(100);
         displayData();
         toggleTip('注册成功');
+    } else {
+        loginErr.textContent = result;
     }
 }
 
 async function update() {
-    let form = new FormData()
+    let form = new FormData();
     form.append('username', loginUsr.value);
     form.append('data', getEncryptedData());
     let result = await post('update', form);
-    if (result) {
-        toggleTip(result, true);
-    } else if (result === '') {
+
+    if (result === '') {
         displayData();
         toggleTip('更新成功');
+    } else {
+        toggleTip(result, true);
     }
 }
 
@@ -204,17 +217,18 @@ async function rename() {
         rnError.textContent = '用户名不得为空'
         return;
     }
-    let form = new FormData()
+    let form = new FormData();
     form.append('old', loginUsr.value);
     form.append('new', rnUsr.value);
     let result = await post('rename', form);
-    if (result) {
-        rnError.textContent = result;
-    } else if (result === '') {
+
+    if (result === '') {
         loginUsr.value = rnUsr.value;
         drawerTitle.textContent = rnUsr.value;
         $(rn).fadeOut(100);
         toggleTip('重命名成功');
+    } else if (result === '') {
+        rnError.textContent = result;
     }
 }
 
@@ -222,14 +236,15 @@ async function deleteAccount() {
     if (!confirm('删除后账户信息无法找回，是否继续？')) {
         return;
     }
-    let form = new FormData()
+    let form = new FormData();
     form.append('username', loginUsr.value);
     let result = await post('delete', form);
-    if (result) {
-        toggleTip(result, true);
-    } else if (result === '') {
+
+    if (result === '') {
         toggleTip('删除成功');
         openSigninDialog();
+    } else if (result === '') {
+        toggleTip(result, true);
     }
 }
 

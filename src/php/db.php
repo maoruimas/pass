@@ -11,26 +11,26 @@ if ($db->connect_error) {
 }
 
 $query = 'CREATE DATABASE IF NOT EXISTS pass';
-if (!$db->query($query)) {
-    die('无法创建数据库：'.$db->error);
-}
+$db->query($query) or die('无法创建数据库：'.$db->error);
 $db->select_db('pass');
 
 $query = 'CREATE TABLE IF NOT EXISTS users (
-    username VARCHAR(64) NOT NULL PRIMARY KEY,
-    data TEXT NOT NULL
+    username CHAR(64) NOT NULL PRIMARY KEY,
+    asset CHAR(8) NOT NULL
 )';
-if (!$db->query($query)) {
-    die('无法创建数据表：'.$db->error);
+$db->query($query) or die('无法创建数据表：'.$db->error);
+
+if (!is_dir('../users')) {
+    mkdir('../users') or die('无法创建用户文件夹');
 }
 
-function getData($username) {
+function getAsset($username) {
     global $db;
-    $query = "SELECT data FROM users WHERE username='$username'";
+    $query = "SELECT asset FROM users WHERE username='$username'";
     $result = $db->query($query);
     if ($result->num_rows == 1) {
-        return $result->fetch_assoc()['data'];
+        return $result->fetch_assoc()['asset'];
     } else {
-        return '';
+        return false;
     }
 }

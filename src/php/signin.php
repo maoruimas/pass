@@ -4,4 +4,5 @@ include_once 'db.php';
 
 $username = $_POST['username'];
 
-echo getData($username);
+$asset = getAsset($username);
+echo $asset ? $asset : '用户不存在';
