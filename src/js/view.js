@@ -24,7 +24,7 @@ let genTarget;
 const num = '0123456789';
 const low = 'abcdefghijklmnopqrstuvwxyz';
 const upp = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-const pun = '!@#$%^&*()_+-=[]{}|;:,.<>?';
+const pun = '!@#$%^&*()[]{}-_=+|;:,.?';
 
 function init() {
     data = parent.getItem();
@@ -48,7 +48,7 @@ function displayData() {
     function insertLi(index, name, cont, disp) {
         const li = document.createElement('li');
         li.id = `li-${index}`;
-        li.innerHTML = `<div class='name'><div class='textfield'>${name}</div></div><div class='cont'><div class='textfield'>${disp ? cont : cont ? '●●●●●●' : ''}</div><div class='opt'><i class='icon-clone'></i></div></div>`;
+        li.innerHTML = `<div class='name'><div class='textfield'>${name}</div></div><div class='cont'><div class='textfield'>${disp ? cont : cont ? '••••••' : ''}</div><div class='opt'><i class='icon-clone'></i></div></div>`;
         fragment.appendChild(li);
     }
     insertLi('t', '标题', data.tit, true);
@@ -166,21 +166,39 @@ function add() {
     $(listview).append("<li><div class='name'><div class='textfield' contenteditable></div><div class='opt'><i class='icon-move'></i><i class='icon-cancel-circled'></i></div></div><div class='cont'><div class='textfield' contenteditable></div><div class='opt'><i class='icon-magic'></i><i class='icon-eye'></i></div></div></li>");
 }
 
+function rand(n) {
+    return Math.floor(Math.random() * n);
+}
+
 function genRandKey() {
     let length = genInputs[0].value;
-    let useNum = genInputs[1].checked;
-    let useLow = genInputs[2].checked;
-    let useUpp = genInputs[3].checked;
-    let usePun = genInputs[4].checked;
-    if (length < 0 || (!useNum && !useLow && !useUpp && !usePun)) {
+    
+    let srcArr = [];
+    if (genInputs[1].checked) srcArr.push(num);
+    if (genInputs[2].checked) srcArr.push(low);
+    if (genInputs[3].checked) srcArr.push(upp);
+    if (genInputs[4].checked) srcArr.push(pun);
+
+    if (srcArr.length === 0  || srcArr.length > length) {
         genError.textContent = '参数不合法';
+        return;
     }
-    const source = `${useNum ? num : ''}${useLow ? low : ''}${useUpp ? upp : ''}${usePun ? pun : ''}`;
-    let res = '';
-    for (var i = 0; i < length; ++i) {
-        res += source[Math.floor(Math.random() * source.length)];
+
+    let keyArr = [], i, j;
+    for (i = 0; i < srcArr.length; ++i) {
+        keyArr.push(srcArr[i][rand(srcArr[i].length)]);
     }
-    genTarget.textContent = res;
+    for (j = srcArr.length; j < length; ++j) {
+        i = rand(srcArr.length);
+        keyArr.push(srcArr[i][rand(srcArr[i].length)]);
+    }
+
+    for (i = 0; i < length - 1; ++i) {
+        j = i + rand(length - i);
+        [keyArr[i], keyArr[j]] = [keyArr[j], keyArr[i]];
+    }
+
+    genTarget.textContent = keyArr.join('');
     $(gen).fadeOut(100);
 }
 
