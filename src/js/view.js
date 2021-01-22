@@ -4,6 +4,7 @@ function q(s) {
 
 const parent = window.parent;
 let data = {};
+let history = []; // [{usr: '', cnt: 0}]
 
 const backBtn = q('.icon-left-open');
 const viewBtn = q('#viewbuttons i:nth-child(1)');
@@ -20,6 +21,9 @@ const genCancel = q('#gen .dialog-cancel');
 const genConfirm = q('#gen .dialog-button');
 const genInputs = document.querySelectorAll('#gen input');
 let genTarget;
+const hisMenu = q('#history .menu');
+const hisPop = q('#history');
+let hisTarget;
 
 const num = '0123456789';
 const low = 'abcdefghijklmnopqrstuvwxyz';
@@ -28,6 +32,7 @@ const pun = '!@#$%^&*()[]{}-_=+|;:,.?';
 
 function init() {
     data = parent.getItem();
+    history = parent.getHistory();
     if (data) {
         displayData();
     } else {
@@ -70,7 +75,7 @@ function displayEditableData() {
     const fragment = document.createDocumentFragment();
     function insertLi(type, name, cont, disp) {
         const li = document.createElement('li');
-        li.innerHTML = `<div class='name'><div class='textfield'${type ? '' : ' contenteditable'}>${name}</div>${type ? '' : "<div class='opt'><i class='icon-move'></i><i class='icon-cancel-circled'></i></div>"}</div><div class='cont'><div class='textfield' contenteditable>${cont}</div><div class='opt'>${(type === 't' || type === 'd') ? '' : "<i class='icon-magic'></i>"}${type ? '' : `<i class='icon-${disp ? 'eye' : 'eye-off'}'></i>`}</div></div>`;
+        li.innerHTML = `<div class='name'><div class='textfield'${type ? '' : ' contenteditable'}>${name}</div>${type ? '' : "<div class='opt'><i class='icon-move'></i><i class='icon-cancel-circled'></i></div>"}</div><div class='cont'><div class='textfield' contenteditable>${cont}</div><div class='opt'>${(type === 't' || type === 'd') ? '' : `<i class='icon-${type === 'u' ? 'history' : 'magic'}'></i>`}${type ? '' : `<i class='icon-${disp ? 'eye' : 'eye-off'}'></i>`}</div></div>`;
         fragment.appendChild(li);
     }
     insertLi('t', '标题', data.tit);
@@ -81,6 +86,16 @@ function displayEditableData() {
         insertLi(0, triple.name, triple.cont, triple.disp);
     });
     listview.appendChild(fragment);
+}
+
+function displayHistoryMenu() {
+    let html = '';
+    for (let h of history) {
+        html += `<div class='menu-item'>${h.usr}</div>`
+    }
+    hisMenu.innerHTML = html;
+
+    $(hisPop).fadeIn(100);
 }
 
 function buildBindings() {
@@ -106,6 +121,9 @@ function buildBindings() {
         } else if (e.target.className === 'icon-magic') {
             genTarget = e.target.parentNode.parentNode.firstChild;
             $(gen).fadeIn(100);
+        } else if (e.target.className === 'icon-history') {
+            hisTarget = e.target.parentNode.parentNode.firstChild;
+            displayHistoryMenu();
         } else if (e.target.className === 'icon-cancel-circled') {
             if (confirm('确认删除？')) {
                 $(e.target.parentNode.parentNode.parentNode).remove();
@@ -117,6 +135,14 @@ function buildBindings() {
     genCancel.onclick = () => $(gen).fadeOut(100);
     genConfirm.onclick = genRandKey;
     addBtn.onclick = add;
+    hisPop.onclick = e => {
+        if (e.target.id === 'history') {
+        } else if (e.target.className === 'menu-item') {
+            hisTarget.textContent = e.target.textContent;
+        }
+        $(hisPop).fadeOut();
+    }
+
 }
 
 function toggleView() {

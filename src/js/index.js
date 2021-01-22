@@ -117,6 +117,24 @@ function getItem() {
     return data[viewId];
 }
 
+function getHistory() {
+    let set = {};
+    for (let item of data) {
+        if (item.usr) {
+            set[item.usr] = set[item.usr] === undefined ? 1 : set[item.usr] + 1;
+        }
+    }
+
+    let arr = [];
+    for (let key in set) {
+        arr.push({'usr': key, 'cnt': set[key]});
+    }
+    arr.sort((a, b) => b.cnt - a.cnt);
+
+    // return arr.map(a => a.usr);
+    return arr;
+}
+
 function setItem(item) {
     data[viewId] = item;
     update();
