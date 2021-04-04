@@ -41,7 +41,7 @@
                 <entry-list :entry-list='entryList' :selected-index='selectedIndex' @select='selectEntry' :disabled='!online'></entry-list>
             </div>
             <div id='right-panel'>
-                <entry-editor id='right-panel-content' :entry="selectedEntry" @back='backToList' @remove='removeEntry' @change='changeEntry' @copy='copy'></entry-editor>
+                <entry-editor id='right-panel-content' :entry="selectedEntry" :history='history' @back='backToList' @remove='removeEntry' @change='changeEntry' @copy='copy'></entry-editor>
             </div>
         </div>
         <pop-message v-model='showPopMessage' :message='message' :error='error'></pop-message>

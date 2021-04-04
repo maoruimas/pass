@@ -15,6 +15,8 @@
     width: 100%;
     height: calc(100% - 40px);
     top: 40px;
+    left: 0px;
+    transition: left .3s ease;
 }
 #left-panel {
     width: 300px;
@@ -147,6 +149,7 @@
     padding: 10px 0;
     border-bottom: 1px solid lightgray;
     background-color: #f7f7f7;
+    z-index: 1;
 }
 .field-name {
     font-size: smaller;
@@ -156,11 +159,31 @@
     word-wrap: break-word;
     word-break: break-all;
 }
+.field {
+    position: relative;
+}
 .field [class^='icon-'] {
     cursor: pointer;
 }
 .field .textfield {
     width: 100%;
+}
+#history {
+    position: absolute;
+    top: calc(100% + 5px);
+    width: 100%;
+    border: 1px solid lightgray;
+    border-radius: 5px;
+    z-index: 1;
+    overflow: hidden;
+}
+#history > * {
+    padding: 10px;
+    background-color: white;
+    cursor: pointer;
+}
+#history > *:hover {
+    background-color: #f7f7f7;
 }
 .generator {
     border: 1px solid lightgray;

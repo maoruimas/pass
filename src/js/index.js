@@ -183,7 +183,7 @@ $(function() {
     </div>
     <div v-else>
         <input class='textfield' placeholder='用户名' v-model='tempUsername' :disabled='status === "pending"'>
-        <input class='textfield' placeholder='密码' v-model='tempPassword' :disabled='status === "pending"'>
+        <input class='textfield' placeholder='密码' v-model='tempPassword' :disabled='status === "pending"' type='password'>
         <div>
             <i :class='"icon-"+status'></i>
             <span>{{message}}</span>
@@ -312,7 +312,10 @@ $(function() {
      * - copy(text)
      */
     Vue.component('entry-editor', {
-        props: ['entry'],
+        props: {
+            entry: Object,
+            history: Array
+        },
         data() {
             return {
                 editing: false,
@@ -322,7 +325,23 @@ $(function() {
                 genUseLow: true,
                 genUseUpp: true,
                 genUseSym: true,
-                genLength: 15
+                genLength: 15,
+                showHistory: false
+            }
+        },
+        computed: {
+            filteredHistory() {
+                let t = this.tempField[2].cont;
+                if (t === '') {
+                    return [];
+                }
+                let ret = [];
+                for (let h of this.history) {
+                    if (h.indexOf(t) === 0 && t.length < h.length) {
+                        ret.push(h);
+                    }
+                }
+                return ret;
             }
         },
         methods: {
@@ -423,7 +442,7 @@ $(function() {
         },
         watch: {
             entry() {
-                if (this.entry !== false) {
+                if (!this.entry.isNull) {
                     this.constructTempField();
                     this.display = false;
                     this.editing = this.entry.isNew ? true : false;
@@ -433,12 +452,12 @@ $(function() {
             }
         },
         mounted() {
-            if (this.entry !== false) {
+            if (!this.entry.isNull) {
                 this.constructTempField();
             }
         },
         template: `
-<div v-if='entry !== false'>
+<div v-if='!entry.isNull'>
     <div id='right-panel-header' class='repel'>
         <i class='button icon-left-big' @click='$emit("back")'></i>
         <div v-if='editing'>
@@ -468,7 +487,10 @@ $(function() {
                     <i class='icon-lightbulb' v-if='i > 1' @click='genRandomString(i)'></i>
                 </div>
             </div>
-            <input class='textfield' v-model='f.cont'>
+            <input class='textfield' v-model='f.cont' @focus='showHistory = i === 2'>
+            <div id='history' v-if='i === 2 && showHistory && filteredHistory.length'>
+                <div v-for='h in filteredHistory' @click='f.cont = h'>{{h}}</div>
+            </div>
         </div>
         <div v-else>
             <div class='field-name'>{{f.name}}</div>
@@ -560,13 +582,26 @@ $(function() {
         computed: {
             selectedEntry() {
                 if (this.selectedIndex < 0) {
-                    return false;
+                    return { isNull: true };
                 } else if (this.selectedIndex < this.entryList.length) {
                     return this.entryList[this.selectedIndex];
                 } else {
                     // For editing added entry
                     return { tit: '', des: '', usr: '', pwd: '', fds: [], isNew: true };
                 }
+            },
+            history() {
+                let set = {};
+                for (let e of this.entryList) {
+                    if (e.usr) {
+                        set[e.usr] = true;
+                    }
+                }
+                let ret = [];
+                for (let key in set) {
+                    ret.push(key);
+                }
+                return ret;
             }
         },
         watch: {
@@ -599,13 +634,13 @@ $(function() {
             },
             selectEntry(i) {
                 if (window.innerWidth <= 600) {
-                    $('#content').animate({left: `-${window.innerWidth}px`}, 'fast');
+                    $('#content').css('left', `-${window.innerWidth}px`);
                 }
                 this.selectedIndex = i;
             },
             backToList() {
                 if (window.innerWidth <= 600) {
-                    $('#content').animate({ left: `0px` }, 'fast');
+                    $('#content').css('left', '0px');
                 }
                 if (this.selectedIndex >= this.entryList.length) {
                     this.selectedIndex = -1;
