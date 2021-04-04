@@ -1,428 +1,764 @@
-function q(s) {
-    return document.querySelector(s);
-}
-
-const listview = q('#listview');
-const mainpage = q('#mainpage');
-const page = q('iframe#page');
-const login = q('#login');
-const loginTitle = q('#login .dialog-title');
-const loginOpt = q('#login a.dialog-a');
-const loginUsr = q('#login #login-usr');
-const loginPwd = q('#login #login-pwd');
-const loginErr = q('#login .dialog-error');
-const loginConfirm = q('#login .dialog-button');
-const tip = q('#tip');
-const drawer = q('.drawer');
-const drawerTitle = q('.drawer-title');
-const menu = q('#menu');
-const menuBtn = q('#toolbar .icon-menu');
-const importBtn = q('#import-btn');
-const exportBtn = q('#export-btn');
-const renameBtn = q('#rename-btn');
-const deleteBtn = q('#delete-btn');
-const logoutBtn = q('#logout-btn');
-const uploadFile = q('#upload-file');
-const searchField = q('#search');
-const clipboard = q('#clipboard');
-const addBtn = q('#toolbar .icon-plus');
-const rn = q('#rename');
-const rnUsr = q('#rename-usr');
-const rnError = q('#rename .dialog-error');
-const rnCancel = q('#rename .dialog-cancel');
-const rnConfirm = q('#rename .dialog-button');
-
-let data = [];
-let viewId = 0;
-
-function displayData() {
-    listview.innerHTML = '';
-    const fragment = document.createDocumentFragment();
-    data.forEach((item, index) => {
-        // set options
-        let opt = '';
-        if (item.usr) opt += `<i class='icon-user'></i>`;
-        if (item.pwd) opt += `<i class='icon-key'></i>`;
-        opt += `<i class='icon-trash'></i>`;
-        // set li
-        const li = document.createElement('li');
-        li.innerHTML = `<a class='tit'>${item.tit}</a><br><span class='des'>${item.des}</span><div class='opt'>${opt}</div>`;
-        li.id = `li-${index}`;
-        // append
-        fragment.appendChild(li);
-    });
-    listview.appendChild(fragment);
-}
-
-function buildBindings() {
-    listview.addEventListener('click', e => {
-        if (e.target.nodeName === 'I') {
-            let index = parseInt(e.target.parentNode.parentNode.id.replace('li-', ''));
-            if (e.target.className === 'icon-user') {
-                writeClipboard(data[index].usr);
-            } else if (e.target.className === 'icon-key') {
-                writeClipboard(data[index].pwd);
-            } else if (e.target.className === 'icon-trash') {
-                if (confirm('确认删除？')) {
-                    data.splice(index, 1);
-                    update();
+$(function() {
+    // Utility functions and classes
+    function rand(n) {
+        return Math.floor(Math.random() * n);
+    }
+    function parseDataJson(json) {
+        let arr = JSON.parse(json);
+        if (!(arr instanceof Array)) {
+            throw new Error('Invalid data format.');
+        }
+        for (let e of arr) {
+            if (typeof e !== 'object') {
+                throw new Error('Invalid data format.');
+            }
+            if (typeof e.tit !== 'string' || typeof e.des !== 'string' || typeof e.usr !== 'string' || typeof e.pwd !== 'string' || !(e.fds instanceof Array)) {
+                throw new Error('Invalid data format.');
+            }
+            for (let f of e.fds) {
+                if (typeof f !== 'object') {
+                    throw new Error('Invalid data format.');
+                }
+                if (typeof f.name !== 'string' || typeof f.cont !== 'string' || typeof f.disp !== 'boolean') {
+                    throw new Error('Invalid data format.');
                 }
             }
-        } else if (e.target.className === 'tit') {
-            viewId = parseInt(e.target.parentNode.id.replace('li-', ''));
-            loadPage();
-        } else if (e.target.className === 'des') {
-            let index = parseInt(e.target.parentNode.id.replace('li-', ''));
-            writeClipboard(data[index].des);
         }
-    });
-    rnUsr.onclick = e => isEnter(e, rename);
-    menuBtn.onclick = openDrawer;
-    menu.onclick = closeDrawer;
-    searchField.oninput = search;
-    addBtn.onclick = add;
-    importBtn.onclick = function() {
-        if (data.length === 0 || confirm('导入数据将清空原始数据，是否继续？')) {
-            $(uploadFile).click();
-        }
-    }
-    uploadFile.onchange = function() {
-        importFile(this.files[0]);
-        this.value = '';
-    }
-    exportBtn.onclick = exportFile;
-    logoutBtn.onclick = logout;
-    renameBtn.onclick = openRenameDialog;
-    rnCancel.onclick = () => $(rn).fadeOut(100);
-    rnConfirm.onclick = rename;
-    deleteBtn.onclick = deleteAccount;
-}
-
-let scrollT;
-
-function loadPage() {
-    page.contentWindow.init();
-    $(page).show();
-    scrollT = $('html').scrollTop();
-    $(mainpage).hide();
-}
-
-function closePage() {
-    $(mainpage).show();
-    $('html').scrollTop(scrollT);
-    $(page).fadeOut(100);
-}
-
-function getItem() {
-    return data[viewId];
-}
-
-function getHistory() {
-    let set = {};
-    for (let item of data) {
-        if (item.usr) {
-            set[item.usr] = set[item.usr] === undefined ? 1 : set[item.usr] + 1;
-        }
+        return arr;
     }
 
-    let arr = [];
-    for (let key in set) {
-        arr.push({'usr': key, 'cnt': set[key]});
-    }
-    arr.sort((a, b) => b.cnt - a.cnt);
-
-    // return arr.map(a => a.usr);
-    return arr;
-}
-
-function setItem(item) {
-    data[viewId] = item;
-    update();
-}
-
-function writeClipboard(text) {
-    clipboard.value = text;
-    clipboard.select();
-    if (document.execCommand('copy')) {
-        toggleTip('已复制');
-    } else {
-        toggleTip('无法写入剪贴板', true);
-    }
-}
-
-function toggleTip(text, error) {
-    tip.textContent = text;
-    tip.style.background = error ? 'red' : 'green';
-    $(tip).fadeIn(100).delay(1000).fadeOut(100);
-}
-
-async function post(method, form) {
-    let response = await fetch(`php/${method}.php`, {
-        method: 'POST',
-        body: form
-    });
-    if (!response.ok) {
-        loginErr.textContent = '网络错误';
-        return false;
-    }
-    return response.text();
-}
-
-async function signin() {
-    let form = new FormData();
-    form.append('username', loginUsr.value);
-    let result = await post('signin', form);
-
-    let valid = (result => {
-        if (result.length != 8) return false;
-        for (let i = 0; i < 8; ++i) {
-            let c = result.charCodeAt(i);
-            if (c < 48 || c > 57) return false;
-        }
-        return true;
-    })(result);
-
-    if (valid) {
-        let response = await fetch(`users/${result}`);
-        let data = await response.text();
-        try {
-            getDecryptedData(data);
-            drawerTitle.textContent = loginUsr.value;
-            $(login).fadeOut(100);
-            displayData();
-            toggleTip('登录成功');
-        } catch(e) {
-            loginErr.textContent = '密码错误';
-        }
-    } else {
-        loginErr.textContent = result;
-    }
-}
-
-async function signup() {
-    data = [];
-    let form = new FormData();
-    form.append('username', loginUsr.value);
-    form.append('data', getEncryptedData());
-    let result = await post('signup', form);
-    
-    if (result === '') {
-        drawerTitle.textContent = loginUsr.value;
-        $(login).fadeOut(100);
-        displayData();
-        toggleTip('注册成功');
-    } else {
-        loginErr.textContent = result;
-    }
-}
-
-async function update() {
-    let form = new FormData();
-    form.append('username', loginUsr.value);
-    form.append('data', getEncryptedData());
-    let result = await post('update', form);
-
-    if (result === '') {
-        displayData();
-        toggleTip('更新成功');
-    } else {
-        toggleTip(result, true);
-    }
-}
-
-async function rename() {
-    if (rnUsr.value === '') {
-        rnError.textContent = '用户名不得为空'
-        return;
-    }
-    let form = new FormData();
-    form.append('old', loginUsr.value);
-    form.append('new', rnUsr.value);
-    let result = await post('rename', form);
-
-    if (result === '') {
-        loginUsr.value = rnUsr.value;
-        drawerTitle.textContent = rnUsr.value;
-        $(rn).fadeOut(100);
-        toggleTip('重命名成功');
-    } else if (result === '') {
-        rnError.textContent = result;
-    }
-}
-
-async function deleteAccount() {
-    if (!confirm('删除后账户信息无法找回，是否继续？')) {
-        return;
-    }
-    let form = new FormData();
-    form.append('username', loginUsr.value);
-    let result = await post('delete', form);
-
-    if (result === '') {
-        toggleTip('删除成功');
-        openSigninDialog();
-    } else if (result === '') {
-        toggleTip(result, true);
-    }
-}
-
-function openSigninDialog() {
-    loginTitle.textContent = '登录';
-    loginOpt.textContent = '注册';
-    loginUsr.value = '';
-    loginPwd.value = '';
-    loginErr.textContent = '';
-    loginConfirm.textContent = '登录';
-
-    loginOpt.onclick = openSignupDialog;
-    loginPwd.onkeydown = e => isEnter(e, signin);
-    loginConfirm.onclick = signin;
-    $(login).show();
-}
-
-function openSignupDialog() {
-    loginTitle.textContent = '注册';
-    loginOpt.textContent = '登录';
-    loginUsr.value = '';
-    loginPwd.value = '';
-    loginErr.textContent = '';
-    loginConfirm.textContent = '注册';
-
-    loginOpt.onclick = openSigninDialog;
-    loginPwd.onkeydown = e => isEnter(e, signup);
-    loginConfirm.onclick = signup;
-    $(login).show();
-}
-
-function openRenameDialog() {
-    rnUsr.value = '';
-    rnError.textContent = '';
-    $(rn).fadeIn(100);
-}
-
-function openDrawer() {
-    $(menu).show();
-    drawer.style.left = -drawer.offsetWidth + 'px';
-    $(drawer).animate({left: '0'}, 100);
-}
-
-function closeDrawer() {
-    $(drawer).animate({left: -drawer.offsetWidth + 'px'}, 100, () => $(menu).hide());
-}
-
-function validateJson(json) {
-    let arr;
-    try {
-        arr = JSON.parse(json);
-    } catch(e) {
-        return false;
-    }
-    if (!(arr instanceof Array)) {
-        return false;
-    }
-    for (var obj of arr) {
-        if (typeof obj !== 'object') {
-            return false;
-        }
-        if (typeof obj.tit !== 'string' || typeof obj.des !== 'string' || typeof obj.usr !== 'string' || typeof obj.pwd !== 'string') {
-            return false;
-        }
-        if (!(obj.fds instanceof Array)) {
-            return false;
-        }
-        for (var fd of obj.fds) {
-            if (typeof fd !== 'object') {
-                return false;
+    let Server = {
+        request: async function (api, params) {
+            let form = new FormData();
+            for (let key in params) {
+                form.append(key, params[key]);
             }
-            if (typeof fd.name !== 'string' || typeof fd.cont !== 'string' || typeof fd.disp !== 'boolean') {
-                return false;
+
+            let r = await fetch(`php/${api}.php`, {
+                method: 'POST',
+                body: form
+            });
+
+            if (!r.ok) {
+                throw new Error(`${r.status} ${r.statusText}`);
+            }
+
+            let json = await r.text();
+            let response = JSON.parse(json);
+
+            if (response.retcode === 0) {
+                return response.data;
+            } else {
+                throw new Error(response.message);
             }
         }
     }
-    return arr;
-}
 
-function importFile(file) {
-    let fr = new FileReader();
-    fr.onload = evt => {
-        let arr = validateJson(fr.result);
-        if (arr) {
-            data = arr;
-            update();
+    let Cipher = {
+        encrypt: function (plainText, key) {
+            return CryptoJS.AES.encrypt(plainText, key).toString();
+        },
+        decrypt: function (cipherText, key) {
+            let t = CryptoJS.AES.decrypt(cipherText, key);
+            return CryptoJS.enc.Utf8.stringify(t);
+        },
+        getHash: function (plainText) {
+            return CryptoJS.SHA256(plainText).toString();
         }
-    };
-    fr.readAsText(file);
-}
-
-function download(text, name) {
-    var a = document.createElement('a');
-    var e = document.createEvent('MouseEvents');
-    e.initEvent('click', false, false);
-    a.download = name;
-    var blob = new Blob([text]);
-    a.href = URL.createObjectURL(blob);
-    a.dispatchEvent(e);
-}
-
-function exportFile() {
-    download(JSON.stringify(data), loginUsr.value);
-}
-
-function getEncryptedData() {
-    return CryptoJS.AES.encrypt(JSON.stringify(data), loginPwd.value).toString();
-}
-
-function getDecryptedData(encrypted) {
-    let decrypted = CryptoJS.AES.decrypt(encrypted, loginPwd.value);
-    let json = CryptoJS.enc.Utf8.stringify(decrypted);
-    data = JSON.parse(json); // may throw an error
-}
-
-function search() {
-    let keywords = searchField.value.trim().split(/\s+/);
-    if (keywords.length === 0) {
-        $('#listview li').each((index, li) => $(li).show());
-        return;
     }
-    $('#listview li').each((index, li) => {
-        let target = $(li).find('.tit').text() + $(li).find('.des').text();
-        let found = false;
-        for (var keyword of keywords) {
-            if (target.search(new RegExp(keyword, 'i')) !== -1) {
-                found = true;
-                break;
+
+
+    // Components
+
+    /**
+     * Events
+     */
+    Vue.component('menu-button', {
+        model: {
+            prop: 'show',
+            event: 'change'
+        },
+        props: {
+            show: Boolean,
+            disabled: Boolean
+        },
+        template: `
+<div class='menu-button'>
+    <div :class='{button: true, disabled: disabled, checked: show}' @click='if (!disabled) $emit("change", !show)'>
+        <slot></slot>
+    </div>
+    <transition name='drop'>
+        <div class='button-menu' v-show='show'>
+            <slot name='menu'></slot>
+        </div>
+    </transition>
+</div>
+        `
+    });
+
+    /**
+     * Events:
+     * - login(username, password, entryList)
+     * - logout()
+     */
+    Vue.component('login-dialog', {
+        props: {
+            username: String,
+            password: String,
+            online: Boolean
+        },
+        data() {
+            return {
+                tempUsername: '',
+                tempPassword: '',
+                status: 'error',
+                message: '用户名或密码不得为空'
+            };
+        },
+        methods: {
+            signup() {
+                this.status = 'pending';
+                this.message = '注册中';
+
+                let hash = Cipher.getHash(this.tempPassword);
+                let data = Cipher.encrypt('[]', hash);
+
+                Server.request('addUser', {name: this.tempUsername, pwd: this.tempPassword, data: data})
+                    .then(() => {
+                        this.$emit('login', this.tempUsername, this.tempPassword, []);
+                    })
+                    .catch(e => {
+                        this.status = 'error';
+                        this.message = e.message;
+                    });
+            },
+            signin() {
+                this.status = 'pending';
+                this.message = '登陆中';
+
+                let hash = Cipher.getHash(this.tempPassword);
+
+                Server.request('getData', {name: this.tempUsername, pwd: this.tempPassword})
+                    .then(data => {
+                        let json = Cipher.decrypt(data, hash);
+                        try {
+                            this.$emit('login', this.tempUsername, this.tempPassword, JSON.parse(json));
+                        } catch(e) {
+                            this.status = 'error';
+                            this.message = e.message;
+                        }
+                    })
+                    .catch(e => {
+                        this.status = 'error';
+                        this.message = e.message;
+                    });
+            },
+            signout() {
+                this.tempUsername = '';
+                this.tempPassword = '';
+                this.$emit('logout');
+            },
+            checkUsernamePassword() {
+                if (this.tempUsername && this.tempPassword) {
+                    this.status = 'good';
+                    this.message = '很好';
+                } else {
+                    this.status = 'error';
+                    this.message = '用户名或密码不得为空';
+                }
+            }
+        },
+        watch: {
+            tempUsername() {
+                this.checkUsernamePassword();
+            },
+            tempPassword() {
+                this.checkUsernamePassword();
+            }
+        },
+        template: `
+<div>
+    <div v-if='online'>
+        <b>{{username}}</b>, <span class='button' @click='signout'><i class='icon-logout'></i> 退出登陆 </span>
+    </div>
+    <div v-else>
+        <input class='textfield' placeholder='用户名' v-model='tempUsername' :disabled='status === "pending"'>
+        <input class='textfield' placeholder='密码' v-model='tempPassword' :disabled='status === "pending"'>
+        <div>
+            <i :class='"icon-"+status'></i>
+            <span>{{message}}</span>
+        </div>
+        <div class='spaced'>
+            <span :class='{button: true, disabled: status !== "good"}' @click='if (status === "good") signup()'><i class='icon-user-plus'></i> 注册 </span>
+            <div :class='{button: true, disabled: status !== "good"}' @click='if (status === "good") signin()'><i class='icon-login'></i> 登陆 </span>
+        </div>
+    </div>
+</div>
+        `
+    });
+
+    /**
+     * Events:
+     * - option(op)
+     */
+    Vue.component('option-menu', {
+        template: `
+<div>
+    <div @click='$emit("option", "import")'>
+        <i class='icon-download'></i>
+        <span>导入</span>
+    </div>
+    <div @click='$emit("option", "export")'>
+        <i class='icon-upload'></i>
+        <span>导出</span>
+    </div>
+    <div @click='$emit("option", "changeUsername")'>
+        <i class='icon-user'></i>
+        <span>修改用户名</span>
+    </div>
+    <div @click='$emit("option", "changePassword")'>
+        <i class='icon-key'></i>
+        <span>修改密码</span>
+    </div>
+    <div @click='$emit("option", "deleteAccount")'>
+        <i class='icon-user-times'></i>
+        <span>注销账户</span>
+    </div>
+</div>
+        `
+    });
+
+    /**
+     * Events:
+     * - select(index)
+     */
+    Vue.component('entry-list', {
+        props: {
+            entryList: Array,
+            selectedIndex: Number,
+            disabled: Boolean
+        },
+        data() {
+            return {
+                keywords: ''
+            }
+        },
+        computed: {
+            filteredEntryList() {
+                let keys = this.keywords.trim().split(/\s+/);
+                let ret = [];
+
+                // newly added entry appears first
+                if (this.selectedIndex === this.entryList.length) {
+                    ret.push({
+                        index: this.selectedIndex,
+                        tit: '新建条目标题',
+                        des: '新建条目详情'
+                    })
+                }
+
+                // newest first
+                for (let i = this.entryList.length - 1; i >= 0; --i) {
+                    let e = this.entryList[i];
+                    for (let k of keys) {
+                        if (e.tit.indexOf(k) !== -1 || e.des.indexOf(k) !== -1) {
+                            ret.push({
+                                index: i,
+                                tit: e.tit,
+                                des: e.des
+                            });
+                            break;
+                        }
+                    }
+                }
+                return ret;
+            }
+        },
+        methods: {
+            selectEntry(i) {
+                this.$emit('select', i);
+            },
+            addEntry() {
+                this.$emit('select', this.entryList.length);
+            }
+        },
+        /*
+        mounted() {
+            if (this.entryList.length) {
+                this.$emit('select', 0);
+            }
+        },
+        */
+        template: `
+<div>
+    <div id='left-panel-header'>
+        <input class='textfield' :placeholder='"搜索 "+entryList.length+" 个条目"' v-model='keywords' :disabled='disabled'>
+        <i :class='{button: true, "icon-plus": true, disabled: disabled}' @click='if (!disabled) addEntry()'></i>
+    </div>
+    <div v-for='e in filteredEntryList' :class='{entry: true, selected: e.index === selectedIndex}' @click='selectEntry(e.index)'>
+        <div class='entry-title'>{{e.tit}}</div>
+        <div class='entry-description'>{{e.des}}</div>
+    </div>
+    <div class='list-bottom'>到底了～</div>
+</div>
+        `
+    });
+
+    /**
+     * Events:
+     * - back()
+     * - remove()
+     * - change(entry)
+     * - copy(text)
+     */
+    Vue.component('entry-editor', {
+        props: ['entry'],
+        data() {
+            return {
+                editing: false,
+                display: false,
+                tempField: [],
+                genUseNum: true,
+                genUseLow: true,
+                genUseUpp: true,
+                genUseSym: true,
+                genLength: 15
+            }
+        },
+        methods: {
+            save() {
+                if (!confirm('确认保存？')) return;
+                let tempEntry = {};
+                tempEntry['tit'] = this.tempField[0].cont;
+                tempEntry['des'] = this.tempField[1].cont;
+                tempEntry['usr'] = this.tempField[2].cont;
+                tempEntry['pwd'] = this.tempField[3].cont;
+                tempEntry['fds'] = [];
+                for (let i = 4; i < this.tempField.length; ++i) {
+                    tempEntry['fds'].push({
+                        'name': this.tempField[i].name,
+                        'cont': this.tempField[i].cont,
+                        'disp': this.tempField[i].disp
+                    });
+                }
+                this.$emit('change', tempEntry);
+                this.editing = false;
+            },
+            edit() {
+                this.editing = true;
+            },
+            cancel() {
+                if (!confirm('确认丢弃未保存的更改？')) return;
+                this.constructTempField();
+                this.editing = false;
+            },
+            constructTempField() {
+                this.tempField = [];
+                this.tempField.push({
+                    name: '标题',
+                    cont: this.entry.tit,
+                    disp: true
+                });
+                this.tempField.push({
+                    name: '详情',
+                    cont: this.entry.des,
+                    disp: true
+                });
+                this.tempField.push({
+                    name: '用户',
+                    cont: this.entry.usr,
+                    disp: true
+                });
+                this.tempField.push({
+                    name: '密码',
+                    cont: this.entry.pwd,
+                    disp: false
+                });
+                for (let f of this.entry.fds) {
+                    this.tempField.push({
+                        name: f.name,
+                        cont: f.cont,
+                        disp: f.disp
+                    });
+                }
+            },
+            addField() {
+                this.tempField.push({ name: '', cont: '', disp: true });
+            },
+            removeField(i) {
+                this.tempField.splice(i, 1);
+            },
+            genRandomString(i) {
+                let charset = [];
+                if (this.genUseNum) charset.push('0123456789');
+                if (this.genUseLow) charset.push('abcdefghijklmnopqrstuvwxyz');
+                if (this.genUseUpp) charset.push('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+                if (this.genUseSym) charset.push('!@#$%^&*()[]{}-_=+|;:,.?');
+
+                if (charset.length === 0) {
+                    // Output an empty string if no type is selected
+                    this.tempField[i].cont = '';
+                    return;
+                }
+
+                let chararr = [];
+                for (let i = 0; i < this.genLength; ++i) {
+                    if (i < charset.length) {
+                        // Use at least one of the chosen type if possible
+                        chararr.push(charset[i][rand(charset[i].length)]);
+                    } else {
+                        let j = rand(charset.length);
+                        chararr.push(charset[j][rand(charset[j].length)]);
+                    }
+                }
+
+                // Shuffle
+                for (let i = 0; i < chararr.length; ++i) {
+                    let j = rand(chararr.length - i);
+                    [chararr[i], chararr[j]] = [chararr[j], chararr[i]];
+                }
+
+                this.tempField[i].cont = chararr.join('');
+            }
+        },
+        watch: {
+            entry() {
+                if (this.entry !== false) {
+                    this.constructTempField();
+                    this.display = false;
+                    this.editing = this.entry.isNew ? true : false;
+                } else {
+                    this.tempField = [];
+                }
+            }
+        },
+        mounted() {
+            if (this.entry !== false) {
+                this.constructTempField();
+            }
+        },
+        template: `
+<div v-if='entry !== false'>
+    <div id='right-panel-header' class='repel'>
+        <i class='button icon-left-big' @click='$emit("back")'></i>
+        <div v-if='editing'>
+            <i class='button icon-plus' @click='addField'></i>
+            <i class='button icon-floppy' @click='save'></i>
+            <i class='button icon-cancel' @click='cancel'></i>
+        </div>
+        <div v-else>
+            <i :class='[display ? "button icon-eye-off" : "button icon-eye"]' @click='display = !display'></i>
+            <i class='button icon-trash' @click='$emit("remove")'></i>
+            <i class='button icon-edit' @click='edit'></i>
+        </div>
+    </div>
+    <div v-for='(f, i) in tempField' class='field'>
+        <div v-if='editing'>
+            <div class='repel'>
+                <div class='field-name'>字段名</div>
+                <div v-if='i > 3'>
+                    <i class='icon-cancel-circled' @click='removeField(i)'></i>
+                </div>
+            </div>
+            <input class='textfield' v-model='f.name' :disabled='i < 4'>
+            <div class='repel'>
+                <div class='field-name'>字段内容</div>
+                <div>
+                    <i :class='[f.disp ? "icon-eye" : "icon-eye-off"]' v-if='i > 3' @click='f.disp = !f.disp'></i>
+                    <i class='icon-lightbulb' v-if='i > 1' @click='genRandomString(i)'></i>
+                </div>
+            </div>
+            <input class='textfield' v-model='f.cont'>
+        </div>
+        <div v-else>
+            <div class='field-name'>{{f.name}}</div>
+            <div class='repel' v-if='f.cont'>
+                <div class='field-content'>{{display || f.disp ? f.cont : '●●●●●●'}}</div>
+                <i class='icon-clone' @click='$emit("copy", f.cont)'></i>
+            </div>
+        </div>
+    </div>
+    <div v-if='editing' class='generator'>
+        <div>
+            <i class='icon-lightbulb'></i>
+            <span>随机生成器设置</span>
+        </div>
+        <div class='repel'>
+            <span>
+                <input type="checkbox" v-model='genUseNum'>
+                <span>0-9</span>
+            </span>
+            <span>
+                <input type="checkbox" v-model='genUseLow'>
+                <span>a-z</span>
+            </span>
+            <span>
+                <input type="checkbox" v-model='genUseUpp'>
+                <span>A-Z</span>
+            </span>
+            <span>
+                <input type="checkbox" v-model='genUseSym'>
+                <span>特殊符号</span>
+            </span>
+        </div>
+        <div class='repel'>
+            <span>长度</span>
+            <input type="range" class='generator-range' min='1' max='30' v-model='genLength'>
+            <span>{{genLength}}</span>
+        </div>
+    </div>
+</div>
+        `
+    });
+
+    /**
+     * Events:
+     */
+    Vue.component('pop-message', {
+        model: {
+            prop: 'show',
+            event: 'hide'
+        },
+        props: {
+            show: Boolean,
+            error: Boolean,
+            message: String
+        },
+        watch: {
+            show() {
+                if (this.show) {
+                    setTimeout(() => {
+                        this.$emit('hide', false);
+                    }, 1000);
+                }
+            }
+        },
+        template: `
+<transition name='drop'>
+    <div class='message' v-show='show'>
+        <span :class='[error ? "message-error" : "message-good"]'>{{message}}</span>
+    </div>
+</transition>
+        `
+    });
+
+    // App
+    let app = new Vue({
+        el: '#app',
+        data: {
+            entryList: [],
+            selectedIndex: -1,
+            showLoginDialog: false,
+            showOptionMenu: false,
+            showPopMessage: false,
+            message: '',
+            error: false,
+            username: '',
+            password: '',
+            online: false
+        },
+        computed: {
+            selectedEntry() {
+                if (this.selectedIndex < 0) {
+                    return false;
+                } else if (this.selectedIndex < this.entryList.length) {
+                    return this.entryList[this.selectedIndex];
+                } else {
+                    // For editing added entry
+                    return { tit: '', des: '', usr: '', pwd: '', fds: [], isNew: true };
+                }
+            }
+        },
+        watch: {
+            showLoginDialog() {
+                if (this.showLoginDialog) {
+                    this.showOptionMenu = false;
+                }
+            },
+            showOptionMenu() {
+                if (this.showOptionMenu) {
+                    this.showLoginDialog = false;
+                }
+            }
+        },
+        methods: {
+            login(username, password, entryList) {
+                this.username = username;
+                this.password = password;
+                this.setEntryList(entryList);
+                this.online = true;
+                this.showLoginDialog = false;
+                this.popMessage('欢迎，'+this.username, false);
+            },
+            logout() {
+                this.username = '';
+                this.password = '';
+                this.entryList = [];
+                this.online = false;
+                this.selectedIndex = -1;
+            },
+            selectEntry(i) {
+                if (window.innerWidth <= 600) {
+                    $('#content').animate({left: `-${window.innerWidth}px`}, 'fast');
+                }
+                this.selectedIndex = i;
+            },
+            backToList() {
+                if (window.innerWidth <= 600) {
+                    $('#content').animate({ left: `0px` }, 'fast');
+                }
+                if (this.selectedIndex >= this.entryList.length) {
+                    this.selectedIndex = -1;
+                }
+            },
+            removeEntry() {
+                if (this.selectedIndex < 0) {
+                } else if (this.selectedIndex < this.entryList.length) {
+                    if (!confirm('确认删除？')) return;
+                    this.entryList.splice(this.selectedIndex, 1);
+                    this.selectedIndex = -1;
+                    this.saveData();
+                } else {
+                    this.selectedIndex = -1;
+                }
+                this.backToList();
+            },
+            changeEntry(entry) {
+                if (this.selectedIndex < 0) {
+                } else if (this.selectedIndex < this.entryList.length) {
+                    this.$set(this.entryList, this.selectedIndex, entry);
+                    this.saveData();
+                } else {
+                    this.entryList.push(entry);
+                    this.saveData();
+                }
+            },
+            copy(text) {
+                let clipboard = document.querySelector('#clipboard');
+                clipboard.value = text;
+                clipboard.select();
+                if (document.execCommand('copy')) {
+                    this.popMessage('复制成功', false);
+                } else {
+                    this.popMessage('无法写入剪贴板', true);
+                }
+            },
+            option(op) {
+                switch(op) {
+                    case 'import': {
+                        if (this.entryList.length > 0 && !confirm('导入数据将清空原始数据，是否继续？')) break;
+                        let fileInput = document.querySelector('#file-input');
+                        $(fileInput).click();
+                        fileInput.onchange = () => {
+                            console.log(fileInput);
+                            let fr = new FileReader();
+                            fr.onload = () => {
+                                try {
+                                    let arr = parseDataJson(fr.result);
+                                    this.setEntryList(arr);
+                                    this.saveData();
+                                } catch(e) {
+                                    this.popMessage(e.message, true);
+                                }
+                            }
+                            fr.readAsText(fileInput.files[0]);
+                            fileInput.value = '';
+                        }
+                        break;
+                    }
+                    case 'export': {
+                        var a = document.createElement('a');
+                        var e = document.createEvent('MouseEvents');
+                        e.initEvent('click', false, false);
+                        a.download = this.username;
+                        var blob = new Blob([JSON.stringify(this.entryList)]);
+                        a.href = URL.createObjectURL(blob);
+                        a.dispatchEvent(e);
+                        break;
+                    }
+                    case 'changeUsername': {
+                        let newName = prompt('输入新用户名');
+                        if (!newName) {
+                            this.popMessage('用户名不得为空', true);
+                            break;
+                        }
+                        Server.request('setUser', {
+                            name: this.username,
+                            pwd: this.password,
+                            newName: newName
+                        })
+                            .then(() => {
+                                this.username = newName;
+                                this.popMessage('用户名修改成功', false);
+                            })
+                            .catch(e => {
+                                this.popMessage(e.message, true);
+                            });
+                        break;
+                    }
+                    case 'changePassword': {
+                        let newPwd = prompt('输入新密码');
+                        if (!newPwd) {
+                            this.popMessage('密码不得为空', true);
+                            break;
+                        }
+                        Server.request('setUser', {
+                            name: this.username,
+                            pwd: this.password,
+                            newPwd: newPwd
+                        })
+                            .then(() => {
+                                this.password = newPwd;
+                                this.popMessage('密码修改成功', false);
+                            })
+                            .catch(e => {
+                                this.popMessage(e.message, true);
+                            });
+                        break;
+                    }
+                    case 'deleteAccount': {
+                        if (!confirm('确认注销账户？')) break;
+                        Server.request('delUser', {
+                            name: this.username,
+                            pwd: this.password
+                        })
+                            .then(() => {
+                                this.logout();
+                                this.popMessage('注销成功', false);
+                            })
+                            .catch(e => {
+                                this.popMessage(e.message, true);
+                            });
+                        break;
+                    }
+                    default: break;
+                }
+                this.showOptionMenu = false;
+            },
+            // help functions
+            saveData() {
+                let hash = Cipher.getHash(this.password);
+                let data = Cipher.encrypt(JSON.stringify(this.entryList), hash);
+
+                Server.request('setData', {name: this.username, pwd: this.password, data: data})
+                    .then(() => {
+                        this.popMessage('保存成功', false);
+                    })
+                    .catch(e => {
+                        this.popMessage(e.message, true);
+                    });
+            },
+            setEntryList(entryList) {
+                this.entryList = [];
+                for (let i = 0; i < entryList.length; ++i) {
+                    this.$set(this.entryList, i, entryList[i]);
+                }
+            },
+            popMessage(message, error) {
+                this.message = message;
+                this.error = error;
+                this.showPopMessage = true;
             }
         }
-        if (found) {
-            $(li).show();
-        } else {
-            $(li).hide();
-        }
     });
-}
-
-function add() {
-    if (!(data instanceof Array)) {
-        alert('未知错误');
-    }
-    viewId = data.length;
-    loadPage();
-}
-
-function logout() {
-    data = [];
-    listview.innerHTML = '';
-    searchField.value = '';
-    openSigninDialog();
-}
-
-function isEnter(evt, callback) {
-    if (evt.key === 'Enter' && typeof callback === 'function') {
-        callback();
-    }
-}
-
-// do stuffs
-
-buildBindings();
-openSigninDialog();
+});

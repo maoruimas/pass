@@ -1,0 +1,25 @@
+.rotate {
+    animation: rotate 2s linear infinite;
+    -webkit-animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+      0% { transform: rotate(  0deg); }
+     50% { transform: rotate(180deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@-webkit-keyframes rotate {
+      0% { -webkit-transform: rotate(  0deg); }
+     50% { -webkit-transform: rotate(180deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+
+.pop-enter-active, .pop-leave-active {
+    transition: all .3s ease;
+}
+
+.pop-enter, .pop-leave-to {
+    transform: scale(0.8);
+    opacity: 0;
+}
