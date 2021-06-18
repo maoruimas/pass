@@ -10,7 +10,7 @@ $data = $_POST['data'];
 $db = new UserDataBase('../data');
 
 try {
-    $text = $db->setText($name, $pwd, 'data', $data);
+    $db->setText($name, $pwd, 'data', $data);
     response(0);
 } catch(Error $e) {
     response(-1, $e->getMessage());

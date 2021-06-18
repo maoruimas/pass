@@ -18,8 +18,15 @@
 .pop-enter-active, .pop-leave-active {
     transition: all .3s ease;
 }
-
-.pop-enter, .pop-leave-to {
+.pop-enter-from, .pop-leave-to {
     transform: scale(0.8);
+    opacity: 0;
+}
+
+.drop-enter-active, .drop-leave-active {
+    transition: all .3s ease;
+}
+.drop-enter-from, .drop-leave-to {
+    top: 0;
     opacity: 0;
 }

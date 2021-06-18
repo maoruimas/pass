@@ -24,12 +24,13 @@
   font-family: "fontello";
   font-style: normal;
   font-weight: normal;
+  /*
   speak: never;
+  */
  
   display: inline-block;
   text-decoration: inherit;
   width: 1em;
-  margin-right: .2em;
   text-align: center;
   /* opacity: .8; */
  
@@ -42,7 +43,10 @@
  
   /* Animation center compensation - margins should be symmetric */
   /* remove if not needed */
+  /*
   margin-left: .2em;
+  margin-right: .2em;
+  */
  
   /* you can be more comfortable with increased icons size */
   /* font-size: 120%; */
