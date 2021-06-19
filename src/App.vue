@@ -397,6 +397,7 @@ export default {
   }
   #left-panel {
     width: 50%;
+    border-right: none;
   }
 }
 #hidden {
