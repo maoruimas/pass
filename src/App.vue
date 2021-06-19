@@ -169,7 +169,7 @@ export default {
       if (this.selectedIndex < 0) {
         // do nothing
       } else if (this.selectedIndex < this.entryList.length) {
-        this.$set(this.entryList, this.selectedIndex, entry);
+        this.entryList[this.selectedIndex] = entry;
         this.saveData();
       } else {
         this.entryList.push(entry);

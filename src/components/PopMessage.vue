@@ -51,7 +51,7 @@ export default {
 .drop-leave-active {
   transition: all 0.3s ease;
 }
-.drop-enter,
+.drop-enter-from,
 .drop-leave-to {
   top: 0;
   opacity: 0;
