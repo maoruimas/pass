@@ -126,6 +126,10 @@ export default {
         this.message = "用户名或密码不得为空";
       }
     },
+    fill(username, password) {
+      this.tempUsername = username;
+      this.tempPassword = password;
+    }
   },
   watch: {
     tempUsername() {

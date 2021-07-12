@@ -49,6 +49,7 @@ textarea {
     word-break: keep-all;
     word-wrap: normal;
     cursor: default;
+    line-height: 0;
 }
 
 .button:not(.disabled):hover {

@@ -6,6 +6,7 @@
         <i class="icon-user-circle-o" />
         <template v-slot:menu>
           <LoginDialog
+            ref="loginDialog"
             :username="username"
             :password="password"
             :online="online"
@@ -54,6 +55,7 @@
 import $ from "jquery";
 import Server from "./utils/server";
 import Cipher from "./utils/cipher";
+import Cookie from "./utils/cookie";
 import MenuButton from "./components/MenuButton.vue";
 import LoginDialog from "./components/LoginDialog.vue";
 import OptionMenu from "./components/OptionMenu.vue";
@@ -130,6 +132,7 @@ export default {
       this.online = true;
       this.showLoginDialog = false;
       this.popMessage("欢迎，" + this.username, "good", 1000);
+      Cookie.set('username', username);
     },
     logout() {
       this.username = "";
@@ -352,6 +355,12 @@ export default {
       this.showPopMessage = true;
     },
   },
+  mounted() {
+    let username = Cookie.get('username');
+    if (username) {
+      this.$refs.loginDialog.fill(username, '');
+    }
+  }
 };
 </script>
 
